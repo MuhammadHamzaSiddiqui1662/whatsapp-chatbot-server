@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { createBot } from "whatsapp-cloud-api";
+import { api } from "./config/axios";
 
 dotenv.config();
 
@@ -22,40 +23,43 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-(async () => {
-  try {
-    const from = process.env.PHONE_NUMBER_ID!;
-    const token = process.env.WHATSAPP_TOKEN!;
-    const webhookVerifyToken = process.env.WEBHOOK_VERIFICATION_TOKEN!;
+app.get("/webhook", async (req, res) => {
+  const mode = req.query["hub.mode"];
+  const challenge = req.query["hub.challenge"];
+  const token = req.query["hub.verify_token"];
 
-    // Create a bot that can send messages
-    const bot = createBot(from, token);
-
-    // Send text message
-    const result = await bot.sendText(
-      process.env.PERSONAL_PHONE_NUMBER_FOR_TESTING!,
-      "Hello world"
-    );
-
-    // Starting express server to listen for incoming messages
-    await bot.startExpressServer({
-      webhookVerifyToken,
-      webhookPath: `/webhook`,
-      app,
-    });
-
-    // Listen to ALL incoming messages
-    // NOTE: remember to always run: await bot.startExpressServer() first
-    bot.on("message", async (msg) => {
-      console.log(msg);
-
-      if (msg.type === "text") {
-        await bot.sendText(msg.from, "Received your text message!");
-      } else if (msg.type === "image") {
-        await bot.sendText(msg.from, "Received your image!");
-      }
-    });
-  } catch (err) {
-    console.log(err);
+  if (mode && token) {
+    if (mode === "subscribe" && token === "SECRET") {
+      res.status(200).send(challenge);
+    } else {
+      res.status(403);
+    }
   }
-})();
+});
+
+app.post("/webhook", async (req, res) => {
+  const messages = req.body.messages;
+  if (messages && messages.length > 0) {
+    // Handle each message
+    messages.forEach((message: any) => {
+      // Process the message
+      console.log("Received message:", message);
+      // Respond to the message
+      sendMessage(message.from, "Hello! This is an automated response.");
+    });
+  }
+  res.sendStatus(200);
+});
+
+const sendMessage = async (to: any, text: any) => {
+  try {
+    const response = await api.post(``, {
+      to,
+      type: "text",
+      text: { body: text },
+    });
+    console.log("Message sent successfully:", response.data);
+  } catch (error) {
+    console.error("Error sending message:", error);
+  }
+};

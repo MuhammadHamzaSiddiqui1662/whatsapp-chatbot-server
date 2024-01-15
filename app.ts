@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { createBot } from "whatsapp-cloud-api";
 import { api } from "./config/axios";
+import { Message, WebhookRequest } from "./types";
 
 dotenv.config();
 
@@ -38,10 +38,10 @@ app.get("/webhook", async (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-  const messages = req.body.messages;
+  const messages = extractMessages(req);
   if (messages && messages.length > 0) {
     // Handle each message
-    messages.forEach((message: any) => {
+    messages.forEach((message: Message) => {
       // Process the message
       console.log("Received message:", message);
       // Respond to the message
@@ -51,9 +51,11 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-const sendMessage = async (to: any, text: any) => {
+const sendMessage = async (to: number, text: string) => {
   try {
     const response = await api.post(``, {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
       to,
       type: "text",
       text: { body: text },
@@ -63,3 +65,12 @@ const sendMessage = async (to: any, text: any) => {
     console.error("Error sending message:", error);
   }
 };
+
+const extractMessages = (req: WebhookRequest) =>
+  req.body.entry[0].changes[0].value.messages;
+
+const extractContacts = (req: WebhookRequest) =>
+  req.body.entry[0].changes[0].value.contacts;
+
+const extractMetadata = (req: WebhookRequest) =>
+  req.body.entry[0].changes[0].value.metadata;

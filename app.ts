@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { createBot } from "whatsapp-cloud-api";
+import { createClient } from "redis";
 
 dotenv.config();
 
@@ -31,6 +32,10 @@ app.get("/", (req, res) => {
     // Create a bot that can send messages
     const bot = createBot(from, token);
 
+    const client = await createClient()
+      .on("error", (err: any) => console.log("Redis Client Error", err))
+      .connect();
+
     // Send text message
     const result = await bot.sendText(
       process.env.PERSONAL_PHONE_NUMBER_FOR_TESTING!,
@@ -43,13 +48,23 @@ app.get("/", (req, res) => {
       webhookPath: `/webhook`,
       app,
     });
+    console.log(await client.del("923341850193"));
 
     // Listen to ALL incoming messages
     // NOTE: remember to always run: await bot.startExpressServer() first
     bot.on("message", async (msg) => {
       console.log(msg);
 
+      const prevCon = await client.lRange(msg.from, 0, -1);
+      console.log(prevCon);
+
       if (msg.type === "text") {
+        // Add reply to cache
+        await client.rPush(msg.from, msg.data.text);
+        const newCon = await client.lRange(msg.from, 0, -1);
+        const conLength = await client.lLen(msg.from);
+        console.log(newCon, conLength);
+
         await bot.sendText(msg.from, "Received your text message!");
       } else if (msg.type === "image") {
         await bot.sendText(msg.from, "Received your image!");

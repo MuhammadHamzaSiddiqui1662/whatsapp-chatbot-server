@@ -6,3 +6,14 @@ export interface MediaResponse {
   id: string;
   messaging_product: "whatsapp";
 }
+
+export type Template =
+  | TemplateOptions
+  | {
+      text: string;
+      errorText: string;
+    };
+
+export interface TemplateOptions {
+  [option: string]: Template;
+}

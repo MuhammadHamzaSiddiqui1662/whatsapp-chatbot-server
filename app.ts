@@ -5,7 +5,8 @@ import { createBot } from "whatsapp-cloud-api";
 import { createClient } from "redis";
 import { api } from "./config/axios";
 import axios from "axios";
-import { MediaResponse } from "./types";
+import { MediaResponse, Template } from "./types";
+import { TEMPLATES } from "./config/templetes";
 
 dotenv.config();
 
@@ -62,13 +63,43 @@ app.get("/", (req, res) => {
       console.log(prevCon);
 
       if (msg.type === "text") {
-        // Add reply to cache
-        await client.rPush(msg.from, msg.data.text);
-        const newCon = await client.lRange(msg.from, 0, -1);
-        const conLength = await client.lLen(msg.from);
-        console.log(newCon, conLength);
+        if (prevCon.length === 0) {
+          await bot.sendText(msg.from, TEMPLATES.text as string);
+          await client.rPush(msg.from, "new");
+        } else if (prevCon.length === 1 && prevCon[0] === "new") {
+          if (isNaN(msg.data.text)) {
+            await bot.sendText(msg.from, TEMPLATES.errorText as string);
+          } else {
+            await client.rPop(msg.from);
+            await client.rPush(msg.from, msg.data.text);
+            await bot.sendText(
+              msg.from,
+              // @ts-ignore
+              TEMPLATES[msg.data.text].text
+            );
+          }
+        } else {
+          let option: Template = TEMPLATES;
+          for (let i = 0; i < prevCon.length; i++) {
+            // @ts-ignore
+            option = option[prevCon[i]];
+          }
+          if (isNaN(msg.data.text)) {
+            await bot.sendText(msg.from, option.errorText as string);
+          } else {
+            await client.rPush(msg.from, msg.data.text);
+            // @ts-ignore
+            await bot.sendText(msg.from, option[msg.data.text].text as string);
+          }
+        }
 
-        await bot.sendText(msg.from, "Received your text message!");
+        // Add reply to cache
+        // await client.rPush(msg.from, msg.data.text);
+        // const newCon = await client.lRange(msg.from, 0, -1);
+        // const conLength = await client.lLen(msg.from);
+        // console.log(newCon, conLength);
+
+        // await bot.sendText(msg.from, "Received your text message!");
       } else if (msg.type === "image") {
         await bot.sendText(msg.from, "Received your image!");
         const imageId = msg.data.id;

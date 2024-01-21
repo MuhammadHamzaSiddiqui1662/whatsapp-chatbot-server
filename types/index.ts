@@ -11,7 +11,7 @@ export type Template =
   | TemplateOptions
   | {
       text: string;
-      errorText: string;
+      errorText?: string;
     };
 
 export interface TemplateOptions {

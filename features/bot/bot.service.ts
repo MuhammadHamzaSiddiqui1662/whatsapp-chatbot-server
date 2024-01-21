@@ -29,6 +29,7 @@ client.on("error", (err: any) => console.log("Redis Client Error", err));
   try {
     // temp code for development only
     await client.del("923341850193");
+    await client.del("923158508658");
 
     // Send text message
     const result = await bot.sendText(

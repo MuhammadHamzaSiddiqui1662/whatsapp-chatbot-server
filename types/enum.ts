@@ -9,3 +9,11 @@ export enum Complaint {
   StreetLight,
   Sanitation,
 }
+
+export enum ComplaintStatus {
+  Pending,
+  InProgress,
+  Completed,
+  Backlog,
+  Archived,
+}

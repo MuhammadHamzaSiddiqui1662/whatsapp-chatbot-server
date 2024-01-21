@@ -2,10 +2,14 @@ import { Bot, Message, createBot } from "whatsapp-cloud-api";
 import { RedisClientType, createClient } from "redis";
 import { api } from "../../config/axios";
 import axios from "axios";
-import { MediaResponse, Template } from "../../types";
+import { MediaResponse } from "../../types";
 import { TEMPLATES } from "../../config/templetes";
 import { app } from "../../app";
-import { Service } from "../../types/enum";
+import { Complaint, ComplaintStatus, Service } from "../../types/enum";
+import {
+  createComplaint,
+  getComplaintWithId,
+} from "../complaint/complaint.service";
 
 const from = process.env.PHONE_NUMBER_ID!;
 const token = process.env.WHATSAPP_TOKEN!;
@@ -150,10 +154,18 @@ async function noteHouseNumberAndAskForImage(msg: Message, temp: string[]) {
     await client.rPush(msg.from, msg.data.text);
 
     // store record to moongoDB
+    const complaint = await createComplaint({
+      house: (await client.rPop(msg.from))!,
+      block: (await client.rPop(msg.from))!,
+      type: (await client.rPop(msg.from))! as any as Complaint,
+      status: ComplaintStatus.Pending,
+    });
+
+    await client.del(msg.from);
 
     await bot.sendText(
       msg.from,
-      `Your complaint has been succefully registered!\nComplaint Number: ${"xxxxx"}\n\nIf your want to attach any image to your complain so please send them, it will be helpfull in process`
+      `Your complaint has been succefully registered!\nComplaint Id: ${complaint._id}\n\nIf your want to attach any image to your complain so please send them, it will be helpfull in process`
     );
   }
 }
@@ -167,9 +179,20 @@ async function trackComplaint(msg: Message) {
     );
   } else {
     // check if there is any complaint in the database and respond with the status
-    const dummyStatus = "*IN PROGRESS*";
+    const complaint = await getComplaintWithId(msg.data.text);
 
-    await bot.sendText(msg.from, `Your complaint status is ${dummyStatus}`);
+    await bot.sendText(
+      msg.from,
+      `Your complaint status is ${
+        complaint?.status === ComplaintStatus.Pending
+          ? "pending"
+          : complaint?.status === ComplaintStatus.InProgress
+          ? "in progress"
+          : complaint?.status === ComplaintStatus.Completed
+          ? "completed"
+          : "undefined"
+      }`
+    );
   }
 }
 

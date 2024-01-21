@@ -1,3 +1,5 @@
+import { Complaint, ComplaintStatus } from "./enum";
+
 export interface MediaResponse {
   url: string;
   mime_type: "image/jpeg";
@@ -16,4 +18,11 @@ export type Template =
 
 export interface TemplateOptions {
   [option: string]: Template;
+}
+
+export interface ComplaintI {
+  type: Complaint;
+  block: string;
+  house: string;
+  status: ComplaintStatus;
 }

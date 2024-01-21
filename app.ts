@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 
@@ -9,6 +10,9 @@ export const app = express();
 //Middlewares
 app.use(express.json());
 app.use(cors());
+
+// Connect to DB
+mongoose.connect(process.env.MONGODB_URI || process.env.DB_CONNECTION!);
 
 const PORT = process.env.PORT || 3000;
 

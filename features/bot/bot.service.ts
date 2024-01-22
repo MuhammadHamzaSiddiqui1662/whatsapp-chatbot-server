@@ -47,37 +47,47 @@ client.on("error", (err: any) => console.log("Redis Client Error", err));
 
       const prevCon: string[] = await client.lRange(msg.from, 0, -1);
       console.log(prevCon);
+      try {
+        if (msg.type === "text" || msg.type === "button_reply") {
+          if (prevCon.length === 0) {
+            // await bot.sendText(msg.from, TEMPLATES.text as string);
+            await bot.sendReplyButtons(msg.from, TEMPLATES.service.text, {
+              0: "Register Complaint",
+              1: "Complaint Tracking",
+              2: "Inquiry",
+            });
+            // await bot.sendReplyButtons(msg.from, "abc", { 3: "dsf", 4: "sdf" });
+            await client.rPush(msg.from, "new");
+          } else if (prevCon.length === 1 && prevCon[0] === "new") {
+            await detectService(msg);
+          } else {
+            let temp = [...prevCon.reverse()];
+            switch (Number(temp.pop())) {
+              case Service.Complaint:
+                await detectComplaint(msg, temp);
+                break;
+              case Service.Tracking:
+                await trackComplaint(msg);
+                break;
+              case Service.Inquiry:
+                await detectInquiry(msg);
+                break;
 
-      if (msg.type === "text") {
-        if (prevCon.length === 0) {
-          await bot.sendText(msg.from, TEMPLATES.text as string);
-          await client.rPush(msg.from, "new");
-        } else if (prevCon.length === 1 && prevCon[0] === "new") {
-          await detectService(msg);
-        } else {
-          let temp = [...prevCon.reverse()];
-          switch (Number(temp.pop()) - 1) {
-            case Service.Complaint:
-              await detectComplaint(msg, temp);
-              break;
-            case Service.Tracking:
-              await trackComplaint(msg);
-              break;
-            case Service.Inquiry:
-              break;
-
-            default:
-              break;
+              default:
+                break;
+            }
           }
+        } else if (msg.type === "image") {
+          await bot.sendText(msg.from, "Received your image!");
+          const imageId = msg.data.id;
+          console.log("image id:", imageId);
+          const image = await getMediaDetails(imageId);
+          console.log("image details", image);
+          const { data: imageData, headers } = await getMediaBinary(image.url);
+          console.log("image binary:", imageData);
         }
-      } else if (msg.type === "image") {
-        await bot.sendText(msg.from, "Received your image!");
-        const imageId = msg.data.id;
-        console.log("image id:", imageId);
-        const image = await getMediaDetails(imageId);
-        console.log("image details", image);
-        const { data: imageData, headers } = await getMediaBinary(image.url);
-        console.log("image binary:", imageData);
+      } catch (error) {
+        console.log(error);
       }
     });
   } catch (err) {
@@ -97,50 +107,82 @@ async function getMediaBinary(mediaUrl: string) {
 }
 
 async function detectService(msg: Message) {
-  if (isNaN(msg.data.text)) {
-    await bot.sendText(msg.from, TEMPLATES.errorText as string);
+  let content = "";
+  if (msg.type === "button_reply") {
+    content = msg.data.id;
+  } else {
+    content = msg.data.text;
+  }
+  if (content != "0" && content != "1" && content != "2") {
+    await bot.sendReplyButtons(msg.from, TEMPLATES.service.errorText, {
+      0: "Complaint Registration",
+      1: "Complaint Tracking",
+      2: "Inquiry",
+    });
   } else {
     await client.rPop(msg.from);
-    await client.rPush(msg.from, msg.data.text);
-    await bot.sendText(
-      msg.from,
-      // @ts-ignore
-      TEMPLATES[msg.data.text].text
-    );
+    await client.rPush(msg.from, content);
+    if (content == "0")
+      await bot.sendReplyButtons(msg.from, TEMPLATES.complaint.text, {
+        0: "Sewerage",
+        1: "Street Light",
+        2: "Sanitaion",
+      });
+    if (content == "1") await bot.sendText(msg.from, TEMPLATES.tracking.text);
+    if (content == "2")
+      await bot.sendReplyButtons(msg.from, TEMPLATES.inquiry.text, {
+        0: "Birth Certificate",
+        1: "Death Certificate",
+        2: "Marriage Certificate",
+        3: "Divorce Certificate",
+      });
   }
 }
 
 async function detectComplaint(msg: Message, temp: string[]) {
+  let content = "";
+  if (msg.type === "button_reply") {
+    content = msg.data.id;
+  } else {
+    content = msg.data.text;
+  }
   if (temp.length > 0) {
     temp.pop();
     await noteBlockNumberAndAskHouseNumber(msg, temp);
-  } else if (isNaN(msg.data.text)) {
-    await bot.sendText(
-      msg.from,
-      // @ts-ignore
-      TEMPLATES[Service.Complaint + 1].errorText
-    );
+  } else if (content != "0" && content != "1" && content != "2") {
+    await bot.sendReplyButtons(msg.from, TEMPLATES.complaint.errorText, {
+      0: "Sewerage",
+      1: "Street Light",
+      2: "Sanitaion",
+    });
   } else {
-    await client.rPush(msg.from, msg.data.text);
-    await bot.sendText(
-      msg.from,
-      // @ts-ignore
-      TEMPLATES[Service.Complaint + 1][msg.data.text].text
-    );
+    await client.rPush(msg.from, content);
+    await bot.sendReplyButtons(msg.from, TEMPLATES.block.text, {
+      0: "Block 13",
+      1: "Block 17",
+      2: "Block 18",
+    });
   }
 }
 
 async function noteBlockNumberAndAskHouseNumber(msg: Message, temp: string[]) {
+  let content = "";
+  if (msg.type === "button_reply") {
+    content = msg.data.id;
+  } else {
+    content = msg.data.text;
+  }
   if (temp.length > 0) {
     temp.pop();
     await noteHouseNumberAndAskForImage(msg, temp);
-  } else if (isNaN(msg.data.text)) {
-    await bot.sendText(
-      msg.from,
-      `Please provide only number of the block from the list below:\n17\n18\n19\n20`
-    );
+  } else if (content != "0" && content != "1" && content != "2") {
+    await bot.sendReplyButtons(msg.from, TEMPLATES.block.errorText, {
+      0: "Block 13",
+      1: "Block 17",
+      2: "Block 18",
+    });
   } else {
-    await client.rPush(msg.from, msg.data.text);
+    await client.rPush(msg.from, content);
     await bot.sendText(
       msg.from,
       `Provide house number for which complaint has to be registered.\n\nFor example:\nA-123\nB-456\nL-20\nDT-50`
@@ -149,9 +191,15 @@ async function noteBlockNumberAndAskHouseNumber(msg: Message, temp: string[]) {
 }
 
 async function noteHouseNumberAndAskForImage(msg: Message, temp: string[]) {
+  let content = "";
+  if (msg.type === "button_reply") {
+    content = msg.data.id;
+  } else {
+    content = msg.data.text;
+  }
   if (temp.length > 0) {
   } else {
-    await client.rPush(msg.from, msg.data.text);
+    await client.rPush(msg.from, content);
 
     // store record to moongoDB
     const complaint = await createComplaint({
@@ -171,15 +219,21 @@ async function noteHouseNumberAndAskForImage(msg: Message, temp: string[]) {
 }
 
 async function trackComplaint(msg: Message) {
-  if (isNaN(msg.data.text)) {
-    await bot.sendText(
-      msg.from,
-      // @ts-ignore
-      TEMPLATES[Service.Tracking + 1].errorText
-    );
-  } else {
+  try {
+    let content = "";
+    if (msg.type === "button_reply") {
+      content = msg.data.id;
+    } else {
+      content = msg.data.text;
+    }
     // check if there is any complaint in the database and respond with the status
-    const complaint = await getComplaintWithId(msg.data.text);
+    const complaint = await getComplaintWithId(content);
+    if (complaint === null) {
+      return await bot.sendText(
+        msg.from,
+        "Invalid complaint id, re-enter the correct id"
+      );
+    }
 
     await bot.sendText(
       msg.from,
@@ -193,21 +247,39 @@ async function trackComplaint(msg: Message) {
           : "undefined"
       }`
     );
+    await client.del(msg.from);
+    await bot.sendText(
+      msg.from,
+      "This chat has ended here, to start a new chat send any text message"
+    );
+  } catch (err: any) {
+    console.log(err);
   }
 }
 
 async function detectInquiry(msg: Message) {
-  if (isNaN(msg.data.text)) {
-    await bot.sendText(
-      msg.from,
-      // @ts-ignore
-      TEMPLATES[Service.Inquiry + 1].errorText
-    );
+  let content = "";
+  if (msg.type === "button_reply") {
+    content = msg.data.id;
   } else {
+    content = msg.data.text;
+  }
+  if (content != "0" && content != "1" && content != "2" && content != "3") {
+    await bot.sendReplyButtons(msg.from, TEMPLATES.inquiry.errorText, {
+      0: "Birth Certificate",
+      1: "Death Certificate",
+      2: "Marriage Certificate",
+      3: "Divorce Certificate",
+    });
+  } else {
+    await client.del(msg.from);
     await bot.sendText(
       msg.from,
-      // @ts-ignore
-      TEMPLATES[Service.Inquiry + 1][msg.data.text].text
+      "For the issuance of birth certificate, your require theses documents:\n1: CNIC copy\n2: hospital certificate"
+    );
+    await bot.sendText(
+      msg.from,
+      "This chat has ended here, to start a new chat send any text message"
     );
   }
 }

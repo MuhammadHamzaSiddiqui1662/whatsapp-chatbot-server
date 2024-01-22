@@ -9,16 +9,10 @@ export interface MediaResponse {
   messaging_product: "whatsapp";
 }
 
-export type Template =
-  | TemplateOptions
-  | {
-      text: string;
-      errorText?: string;
-    };
-
-export interface TemplateOptions {
-  [option: string]: Template;
-}
+export type Template = {
+  text: string;
+  errorText: string;
+};
 
 export interface ComplaintI {
   type: Complaint;

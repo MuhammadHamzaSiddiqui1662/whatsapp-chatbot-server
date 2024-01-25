@@ -1,4 +1,5 @@
 import { ComplaintI } from "../../types";
+import { ComplaintStatus } from "../../types/enum";
 import { Complaint } from "./complaint.modal";
 
 export const getAllComplaints = async (): Promise<ComplaintI[]> => {
@@ -16,4 +17,13 @@ export const getComplaintWithId = async (
 export const createComplaint = async (complaint: ComplaintI) => {
   const _complaint = new Complaint(complaint);
   return await _complaint.save();
+};
+
+export const updateComplaintStatus = async (
+  id: string,
+  status: ComplaintStatus
+) => {
+  const complaint = await Complaint.updateOne({ _id: id }, { status });
+  console.log(complaint);
+  return complaint;
 };

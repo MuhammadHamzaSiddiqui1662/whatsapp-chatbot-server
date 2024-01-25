@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import ComplaintRouter from "./features/complaint/complaint.controller";
 
 dotenv.config();
 
@@ -24,5 +25,7 @@ app.get("/", (req, res) => {
   console.log(`Server is running on port ${PORT}`);
   res.send("Hello World!");
 });
+
+app.use("/complaints", ComplaintRouter);
 
 import "./features/bot/bot.service";

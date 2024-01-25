@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import { ComplaintStatus } from "../../types/enum";
+import dayjs, { Dayjs } from "dayjs";
 
 const complaintSchema = new Schema({
   type: {
@@ -18,6 +19,14 @@ const complaintSchema = new Schema({
     type: Number,
     default: ComplaintStatus.Pending,
   },
+  date: {
+    type: Date,
+  },
+});
+
+complaintSchema.pre("save", function (next) {
+  this.date = new Date();
+  next();
 });
 
 export const Complaint = model("complaint", complaintSchema);

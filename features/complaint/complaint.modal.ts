@@ -1,6 +1,5 @@
 import { Schema, model } from "mongoose";
 import { ComplaintStatus } from "../../types/enum";
-import dayjs, { Dayjs } from "dayjs";
 
 const complaintSchema = new Schema({
   type: {

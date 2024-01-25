@@ -167,15 +167,18 @@ async function detectComplaint(msg: Message, temp: string[]) {
 
 async function noteBlockNumberAndAskHouseNumber(msg: Message, temp: string[]) {
   let content = "";
+  let id = "";
   if (msg.type === "button_reply") {
-    content = msg.data.id;
+    content = msg.data.title;
+    id = msg.data.id;
   } else {
     content = msg.data.text;
+    id = msg.data.text;
   }
   if (temp.length > 0) {
     temp.pop();
     await noteHouseNumberAndAskForImage(msg, temp);
-  } else if (content != "0" && content != "1" && content != "2") {
+  } else if (id != "0" && id != "1" && id != "2") {
     await bot.sendReplyButtons(msg.from, TEMPLATES.block.errorText, {
       0: "Block 13",
       1: "Block 17",

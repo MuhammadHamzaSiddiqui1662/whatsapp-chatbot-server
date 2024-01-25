@@ -115,7 +115,7 @@ async function detectService(msg: Message) {
   }
   if (content != "0" && content != "1" && content != "2") {
     await bot.sendReplyButtons(msg.from, TEMPLATES.service.errorText, {
-      0: "Complaint Registration",
+      0: "Register Complaint",
       1: "Complaint Tracking",
       2: "Inquiry",
     });
@@ -188,7 +188,7 @@ async function noteBlockNumberAndAskHouseNumber(msg: Message, temp: string[]) {
     await client.rPush(msg.from, content);
     await bot.sendText(
       msg.from,
-      `Provide house number for which complaint has to be registered.\n\nFor example:\nA-123\nB-456\nL-20\nDT-50`
+      `شکایت کا پتہ کیا ہے؟\n\nWhat is the address of the complaint?`
     );
   }
 }
@@ -216,8 +216,12 @@ async function noteHouseNumberAndAskForImage(msg: Message, temp: string[]) {
 
     await bot.sendText(
       msg.from,
-      `Your complaint has been succefully registered!\nComplaint Id: ${complaint._id}\n\nIf your want to attach any image to your complain so please send them, it will be helpfull in process`
+      `Thank you for registering your complaint regarding ${
+        Complaint[complaint.type]
+      }.\nPlease note your complaint number in the next message for tracking in future.\nOne of our team members will be assigned to resolve the issue as soon as possible.\nExpected complaint resolution time is 2 to 3 working days.\nWe appreciate your cooperation.\n\nTeam UC 2 Samanabad`
     );
+    await bot.sendText(msg.from, `Your Complaint Number is:`);
+    await bot.sendText(msg.from, `${complaint._id}`);
   }
 }
 

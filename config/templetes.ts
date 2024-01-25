@@ -4,7 +4,7 @@ export const TEMPLATES: {
   [title: string]: Template;
 } = {
   service: {
-    text: `Greetings!\nThis is an automated bot service for Inquiry & Complaint Registration/Tracking regarding local issues.\n\nSelect the appropriate option`,
+    text: `یو سی 2 سمن آباد شکایتی مرکز میں خوش آمدید\n\nWelcome to UC 2 Samanabad Complaints Center.\nThis is an automated bot service for Inquiry & Complaint Registration/Tracking regarding local issues.\n\nSelect the appropriate option`,
     errorText: `This is an automated bot, you cannot chat with it, if you want to avail any of our service so please select the option`,
   },
   tracking: {
@@ -16,23 +16,11 @@ export const TEMPLATES: {
     errorText: `This is an automated bot, you cannot chat with it, if you want to inquire about any service so please select the option`,
   },
   complaint: {
-    text: `Which type of complaint do you want to register?`,
+    text: `آپ کو کس نوعیت کی شکایت ہے؟\n\nIdentify the type of complaint:\n`,
     errorText: `This is an automated bot, you cannot chat with it, if you want to register any complaint so please select the option`,
   },
   block: {
-    text: `Specify the block number`,
+    text: `شکایت کا بلاک کیا ہے؟\n\nWhat is the block of the complaint?`,
     errorText: `This is an automated bot, you cannot chat with it, if you want to register complaint so please select the option`,
-  },
-  sewerage: {
-    text: `Specify the block number`,
-    errorText: `This is an automated bot, you cannot chat with it, if you want to register severage complaint so please select the option`,
-  },
-  streetLight: {
-    text: `Specify the block number`,
-    errorText: `This is an automated bot, you cannot chat with it, if you want to register street light complaint so please select the option`,
-  },
-  sanitation: {
-    text: `Specify the block number`,
-    errorText: `This is an automated bot, you cannot chat with it, if you want to register sanitation complaint so please select the option`,
   },
 };

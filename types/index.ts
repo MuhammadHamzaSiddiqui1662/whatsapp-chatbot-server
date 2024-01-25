@@ -20,3 +20,10 @@ export interface ComplaintI {
   house: string;
   status: ComplaintStatus;
 }
+
+export interface UserI {
+  name: string;
+  block: string;
+  house: string;
+  mobile: string;
+}

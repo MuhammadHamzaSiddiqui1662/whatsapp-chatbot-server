@@ -15,6 +15,7 @@ export type Template = {
 };
 
 export interface ComplaintI {
+  id: Number;
   type: Complaint;
   block: string;
   house: string;

@@ -2,6 +2,10 @@ import { Schema, model } from "mongoose";
 import { ComplaintStatus } from "../../types/enum";
 
 const complaintSchema = new Schema({
+  id: {
+    type: Number,
+    required: [true, "id is required, but recived an empty value"],
+  },
   type: {
     type: Number,
     required: [true, "complaint type is required, but recived an empty value"],

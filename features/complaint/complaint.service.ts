@@ -8,9 +8,9 @@ export const getAllComplaints = async (): Promise<ComplaintI[]> => {
 };
 
 export const getComplaintWithId = async (
-  _id: string
+  id: string
 ): Promise<ComplaintI | null> => {
-  const complaint = await Complaint.findOne<ComplaintI>({ _id });
+  const complaint = await Complaint.findOne<ComplaintI>({ id });
   return complaint;
 };
 

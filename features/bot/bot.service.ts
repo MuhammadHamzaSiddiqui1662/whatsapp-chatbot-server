@@ -39,6 +39,8 @@ bot.startExpressServer({
     await client.del("923341850193/user");
     await client.del("923158508658/user");
 
+    await client.set("complaintNo", 1);
+
     // Send text message
     const result = await bot.sendText(
       process.env.PERSONAL_PHONE_NUMBER_FOR_TESTING!,
@@ -366,6 +368,7 @@ async function isAddressSame(msg: Message, temp: string[], user: UserI) {
 }
 
 async function noteDetails(msg: Message, temp: string[], user: UserI) {
+  const complaintNo = Number(await client.get("complaintNo"));
   if (msg.type === "button_reply") {
     await bot.sendText(msg.from, TEMPLATES[user.lang].details.text);
   } else {
@@ -373,20 +376,22 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
     const complaint = await createComplaint(
       tempComplaint[2] == "0"
         ? {
+            id: complaintNo,
             type: tempComplaint[1] as unknown as Complaint,
             block: user.block,
             house: user.house,
             status: ComplaintStatus.Pending,
           }
         : {
+            id: complaintNo,
             type: tempComplaint[1] as unknown as Complaint,
             block: tempComplaint[3],
             house: tempComplaint[4],
             status: ComplaintStatus.Pending,
           }
     );
-    console.log(complaint);
 
+    await client.set("complaintNo", complaintNo + 1);
     await client.del(msg.from);
 
     if (user.lang == Language.English)
@@ -404,7 +409,7 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
       );
 
     await bot.sendText(msg.from, TEMPLATES[user.lang].complaintNumber.text);
-    await bot.sendText(msg.from, `${complaint._id}`);
+    await bot.sendText(msg.from, `${complaint.id}`);
   }
 }
 
@@ -456,9 +461,14 @@ async function trackComplaint(msg: Message) {
     } else {
       content = msg.data.text;
     }
+    if (isNaN(Number(content))) {
+      return await bot.sendText(
+        msg.from,
+        "Invalid complaint id, re-enter the correct id"
+      );
+    }
     // check if there is any complaint in the database and respond with the status
     const complaint = await getComplaintWithId(content);
-    console.log("invalid");
     if (complaint == null) {
       return await bot.sendText(
         msg.from,

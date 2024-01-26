@@ -399,7 +399,7 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
         msg.from,
         TEMPLATES[Language.English].complaintThanks.text(
           user.name,
-          complaint.type
+          getComplaintTitle(complaint.type, Language.English)
         )
       );
     else
@@ -409,7 +409,7 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
       );
 
     await bot.sendText(msg.from, TEMPLATES[user.lang].complaintNumber.text);
-    await bot.sendText(msg.from, `${complaint.id}`);
+    await bot.sendText(msg.from, `${complaint.id.toString().padStart(5, 0)}`);
   }
 }
 

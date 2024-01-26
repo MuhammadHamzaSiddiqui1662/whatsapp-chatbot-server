@@ -1,5 +1,4 @@
 import { Bot, Message, createBot } from "whatsapp-cloud-api";
-import { RedisClientType, createClient } from "redis";
 import { api } from "../../config/axios";
 import axios from "axios";
 import { MediaResponse, UserI } from "../../types";
@@ -17,6 +16,7 @@ import {
   getComplaintWithId,
 } from "../complaint/complaint.service";
 import { createUser, getUserWithMobileNumber } from "../user/user.service";
+import client from "../cache/cache.service";
 
 const from = process.env.PHONE_NUMBER_ID!;
 const token = process.env.WHATSAPP_TOKEN!;
@@ -30,11 +30,6 @@ bot.startExpressServer({
   webhookPath: `/webhook`,
   app,
 });
-
-// Create redis client for cashing
-const client: RedisClientType = createClient();
-client.connect();
-client.on("error", (err: any) => console.log("Redis Client Error", err));
 
 (async () => {
   try {

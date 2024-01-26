@@ -399,7 +399,7 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
         msg.from,
         TEMPLATES[Language.English].complaintThanks.text(
           user.name,
-          getComplaintTitle(complaint.type, Language.English)
+          await getComplaintTitle(complaint.type, Language.English)
         )
       );
     else

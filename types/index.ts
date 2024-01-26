@@ -1,4 +1,4 @@
-import { Complaint, ComplaintStatus } from "./enum";
+import { Complaint, ComplaintStatus, Language } from "./enum";
 
 export interface MediaResponse {
   url: string;
@@ -10,8 +10,8 @@ export interface MediaResponse {
 }
 
 export type Template = {
-  text: string;
-  errorText: string;
+  text: any;
+  errorText?: string;
 };
 
 export interface ComplaintI {
@@ -26,4 +26,5 @@ export interface UserI {
   block: string;
   house: string;
   mobile: string;
+  lang: Language;
 }

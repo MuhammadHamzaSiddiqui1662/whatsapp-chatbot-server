@@ -3,7 +3,7 @@ import { Schema, model } from "mongoose";
 const userSchema = new Schema({
   name: {
     type: String,
-    required: [true, "name type is required, but recived an empty value"],
+    required: [true, "name is required, but recived an empty value"],
   },
   block: {
     type: String,
@@ -16,6 +16,10 @@ const userSchema = new Schema({
   mobile: {
     type: String,
     required: [true, "mobile number is required, but recived an empty value"],
+  },
+  lang: {
+    type: String,
+    required: [true, "lang is required, but recived an empty value"],
   },
 });
 

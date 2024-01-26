@@ -2,14 +2,21 @@ import { Bot, Message, createBot } from "whatsapp-cloud-api";
 import { RedisClientType, createClient } from "redis";
 import { api } from "../../config/axios";
 import axios from "axios";
-import { MediaResponse } from "../../types";
+import { MediaResponse, UserI } from "../../types";
 import { TEMPLATES } from "../../config/templetes";
 import { app } from "../../app";
-import { Complaint, ComplaintStatus, Service } from "../../types/enum";
+import {
+  Block,
+  Complaint,
+  ComplaintStatus,
+  Language,
+  Service,
+} from "../../types/enum";
 import {
   createComplaint,
   getComplaintWithId,
 } from "../complaint/complaint.service";
+import { createUser, getUserWithMobileNumber } from "../user/user.service";
 
 const from = process.env.PHONE_NUMBER_ID!;
 const token = process.env.WHATSAPP_TOKEN!;
@@ -34,6 +41,8 @@ client.on("error", (err: any) => console.log("Redis Client Error", err));
     // temp code for development only
     await client.del("923341850193");
     await client.del("923158508658");
+    await client.del("923341850193/user");
+    await client.del("923158508658/user");
 
     // Send text message
     const result = await bot.sendText(
@@ -49,28 +58,127 @@ client.on("error", (err: any) => console.log("Redis Client Error", err));
       console.log(prevCon);
       try {
         if (msg.type === "text" || msg.type === "button_reply") {
+          const user = await getUserWithMobileNumber(msg.from);
           if (prevCon.length === 0) {
-            // await bot.sendText(msg.from, TEMPLATES.text as string);
-            await bot.sendReplyButtons(msg.from, TEMPLATES.service.text, {
-              0: "Register Complaint",
-              1: "Complaint Tracking",
-              2: "Inquiry",
-            });
-            // await bot.sendReplyButtons(msg.from, "abc", { 3: "dsf", 4: "sdf" });
-            await client.rPush(msg.from, "new");
+            if (!user) {
+              //to be moved up // re-arrangment required
+              const tempUser = await client.get(`${msg.from}/user`);
+              const langCode: Language = Number(
+                await extractLanguage(msg.from)
+              );
+              if (!tempUser) {
+                await bot.sendReplyButtons(
+                  msg.from,
+                  `${TEMPLATES[Language.English].language.text}\n\n${
+                    TEMPLATES[Language.Urdu].language.text
+                  }`,
+                  {
+                    [Language.English]: "English",
+                    [Language.Urdu]: "اردو",
+                  }
+                );
+                await client.setEx(`${msg.from}/user`, 3600, "new");
+              } else if (tempUser == "new") {
+                await detectLanguage(msg);
+              } else if (await getKeyValueFromCacheUser(msg.from, "blkNo")) {
+                await client.setEx(
+                  `${msg.from}/user`,
+                  3600,
+                  `${tempUser}hNo=${msg.data.text};`
+                );
+                const user = await createUser({
+                  name: (await getKeyValueFromCacheUser(msg.from, "name"))!,
+                  mobile: msg.from,
+                  block: (await getKeyValueFromCacheUser(msg.from, "blkNo"))!,
+                  house: (await getKeyValueFromCacheUser(msg.from, "hNo"))!,
+                  lang: langCode,
+                });
+                await bot.sendText(
+                  msg.from,
+                  TEMPLATES[langCode].registrationThanks.text(user.name)
+                );
+                await bot.sendReplyButtons(
+                  msg.from,
+                  TEMPLATES[langCode].service.text,
+                  langCode == Language.English
+                    ? {
+                        [Service.Complaint]: "Register Complaint",
+                        [Service.Tracking]: "Complaint Tracking",
+                      }
+                    : {
+                        [Service.Complaint]: "شکایت درج کریں",
+                        [Service.Tracking]: "شکایت کی ٹریکنگ",
+                      }
+                );
+                await client.rPush(msg.from, "new");
+              } else if (await getKeyValueFromCacheUser(msg.from, "name")) {
+                let content = "";
+                if (msg.type === "button_reply") {
+                  content = msg.data.id;
+                } else {
+                  content = msg.data.text;
+                }
+                await client.setEx(
+                  `${msg.from}/user`,
+                  3600,
+                  `${tempUser}blkNo=${content};`
+                );
+                await bot.sendText(
+                  msg.from,
+                  TEMPLATES[langCode].residentialHouse.text
+                );
+              } else if (await getKeyValueFromCacheUser(msg.from, "lang")) {
+                await client.setEx(
+                  `${msg.from}/user`,
+                  3600,
+                  `${tempUser}name=${msg.data.text};`
+                );
+                await bot.sendReplyButtons(
+                  msg.from,
+                  TEMPLATES[langCode].residentialBlock.text,
+                  {
+                    [Block.Block13]: await getBlockTitle(
+                      Block.Block13,
+                      langCode
+                    ),
+                    [Block.Block17]: await getBlockTitle(
+                      Block.Block17,
+                      langCode
+                    ),
+                    [Block.Block18]: await getBlockTitle(
+                      Block.Block18,
+                      langCode
+                    ),
+                  }
+                );
+              } else {
+              }
+            } else {
+              await bot.sendReplyButtons(
+                msg.from,
+                TEMPLATES[user.lang].welcome.text(user.name),
+                user.lang == Language.English
+                  ? {
+                      [Service.Complaint]: "Register Complaint",
+                      [Service.Tracking]: "Complaint Tracking",
+                    }
+                  : {
+                      [Service.Complaint]: "شکایت درج کریں",
+                      [Service.Tracking]: "شکایت کی ٹریکنگ",
+                    }
+              );
+              await client.rPush(msg.from, "new");
+            }
           } else if (prevCon.length === 1 && prevCon[0] === "new") {
-            await detectService(msg);
+            await detectService(msg, Language.English);
           } else {
             let temp = [...prevCon.reverse()];
             switch (Number(temp.pop())) {
               case Service.Complaint:
-                await detectComplaint(msg, temp);
+                await detectComplaint(msg, temp, user!);
                 break;
               case Service.Tracking:
                 await trackComplaint(msg);
-                break;
-              case Service.Inquiry:
-                await detectInquiry(msg);
                 break;
 
               default:
@@ -85,6 +193,11 @@ client.on("error", (err: any) => console.log("Redis Client Error", err));
           console.log("image details", image);
           const { data: imageData, headers } = await getMediaBinary(image.url);
           console.log("image binary:", imageData);
+        } else {
+          await bot.sendText(
+            msg.from,
+            `${msg.type} message type is not supported, please reply with the text or buttons.`
+          );
         }
       } catch (error) {
         console.log(error);
@@ -94,6 +207,48 @@ client.on("error", (err: any) => console.log("Redis Client Error", err));
     console.log(err);
   }
 })();
+
+async function detectLanguage(msg: Message) {
+  let content = "";
+  if (msg.type === "button_reply") {
+    content = msg.data.id;
+  } else {
+    content = msg.data.text;
+  }
+  if (content != "0" && content != "1") {
+    await bot.sendReplyButtons(
+      msg.from,
+      `${TEMPLATES[Language.English].language.errorText}\n\n${
+        TEMPLATES[Language.Urdu].language.errorText
+      }`,
+      {
+        [Language.English]: "English",
+        [Language.Urdu]: "اردو",
+      }
+    );
+  } else {
+    await client.setEx(`${msg.from}/user`, 3600, `lang=${content};`);
+    if (content == "0")
+      await bot.sendText(msg.from, TEMPLATES[Language.English].name.text);
+    else await bot.sendText(msg.from, TEMPLATES[Language.Urdu].name.text);
+  }
+}
+
+async function extractLanguage(mobile: string) {
+  const data = await client.get(`${mobile}/user`);
+  const combination = data
+    ?.split(";")
+    .find((combination) => combination.split("=")[0] == "lang");
+  return combination ? combination.split("=")[1] : undefined;
+}
+
+async function getKeyValueFromCacheUser(mobile: string, key: string) {
+  const data = await client.get(`${mobile}/user`);
+  const combination = data
+    ?.split(";")
+    .find((combination) => combination.split("=")[0] == key);
+  return combination ? combination.split("=")[1] : undefined;
+}
 
 async function getMediaDetails(id: string) {
   const { data } = await api.get<MediaResponse>(`/${id}/`);
@@ -106,40 +261,51 @@ async function getMediaBinary(mediaUrl: string) {
   return { data, headers };
 }
 
-async function detectService(msg: Message) {
+async function detectService(msg: Message, langCode: Language) {
   let content = "";
   if (msg.type === "button_reply") {
     content = msg.data.id;
   } else {
     content = msg.data.text;
   }
-  if (content != "0" && content != "1" && content != "2") {
-    await bot.sendReplyButtons(msg.from, TEMPLATES.service.errorText, {
-      0: "Register Complaint",
-      1: "Complaint Tracking",
-      2: "Inquiry",
-    });
+  if (content != "0" && content != "1") {
+    await bot.sendReplyButtons(
+      msg.from,
+      TEMPLATES[langCode].service.text,
+      langCode == Language.English
+        ? {
+            [Service.Complaint]: "Register Complaint",
+            [Service.Tracking]: "Complaint Tracking",
+          }
+        : {
+            [Service.Complaint]: "شکایت درج کریں",
+            [Service.Tracking]: "شکایت کی ٹریکنگ",
+          }
+    );
   } else {
     await client.rPop(msg.from);
     await client.rPush(msg.from, content);
     if (content == "0")
-      await bot.sendReplyButtons(msg.from, TEMPLATES.complaint.text, {
-        0: "Sewerage",
-        1: "Street Light",
-        2: "Sanitaion",
+      await bot.sendReplyButtons(msg.from, TEMPLATES[langCode].complaint.text, {
+        [Complaint.Sewerage]: await getComplaintTitle(
+          Complaint.Sewerage,
+          langCode
+        ),
+        [Complaint.StreetLight]: await getComplaintTitle(
+          Complaint.StreetLight,
+          langCode
+        ),
+        [Complaint.Sanitation]: await getComplaintTitle(
+          Complaint.Sanitation,
+          langCode
+        ),
       });
-    if (content == "1") await bot.sendText(msg.from, TEMPLATES.tracking.text);
-    if (content == "2")
-      await bot.sendReplyButtons(msg.from, TEMPLATES.inquiry.text, {
-        0: "Birth Certificate",
-        1: "Death Certificate",
-        2: "Marriage Certificate",
-        3: "Divorce Certificate",
-      });
+    if (content == "1")
+      await bot.sendText(msg.from, TEMPLATES[langCode].tracking.text);
   }
 }
 
-async function detectComplaint(msg: Message, temp: string[]) {
+async function detectComplaint(msg: Message, temp: string[], user: UserI) {
   let content = "";
   if (msg.type === "button_reply") {
     content = msg.data.id;
@@ -148,24 +314,110 @@ async function detectComplaint(msg: Message, temp: string[]) {
   }
   if (temp.length > 0) {
     temp.pop();
-    await noteBlockNumberAndAskHouseNumber(msg, temp);
+    await isAddressSame(msg, temp, user);
   } else if (content != "0" && content != "1" && content != "2") {
-    await bot.sendReplyButtons(msg.from, TEMPLATES.complaint.errorText, {
-      0: "Sewerage",
-      1: "Street Light",
-      2: "Sanitaion",
+    await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].complaint.text, {
+      [Complaint.Sewerage]: await getComplaintTitle(
+        Complaint.Sewerage,
+        user.lang
+      ),
+      [Complaint.StreetLight]: await getComplaintTitle(
+        Complaint.StreetLight,
+        user.lang
+      ),
+      [Complaint.Sanitation]: await getComplaintTitle(
+        Complaint.Sanitation,
+        user.lang
+      ),
     });
   } else {
     await client.rPush(msg.from, content);
-    await bot.sendReplyButtons(msg.from, TEMPLATES.block.text, {
-      0: "Block 13",
-      1: "Block 17",
-      2: "Block 18",
+    await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].address.text, {
+      0: `${user.house} ${await getBlockTitle(Number(user.block), user.lang)}`,
+      1: user.lang == Language.English ? "Other" : "کچھ اور",
     });
   }
 }
 
-async function noteBlockNumberAndAskHouseNumber(msg: Message, temp: string[]) {
+async function isAddressSame(msg: Message, temp: string[], user: UserI) {
+  let content = "";
+  if (msg.type === "button_reply") {
+    content = msg.data.id;
+  } else {
+    content = msg.data.text;
+  }
+  if (temp.length > 0) {
+    const isSame = temp.pop() == "0";
+    isSame
+      ? await noteDetails(msg, temp, user)
+      : await noteBlockNumberAndAskHouseNumber(msg, temp, user);
+  } else if (content != "0" && content != "1") {
+    await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].address.text, {
+      0: `${user.house} ${getBlockTitle(Number(user.block), user.lang)}`,
+      1: user.lang == Language.English ? "Other" : "کچھ اور",
+    });
+  } else {
+    await client.rPush(msg.from, content);
+    if (content == "0") {
+      await bot.sendText(msg.from, TEMPLATES[user.lang].details.text);
+    } else {
+      await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].block.text, {
+        [Block.Block13]: await getBlockTitle(Block.Block13, user.lang),
+        [Block.Block17]: await getBlockTitle(Block.Block17, user.lang),
+        [Block.Block18]: await getBlockTitle(Block.Block18, user.lang),
+      });
+    }
+  }
+}
+
+async function noteDetails(msg: Message, temp: string[], user: UserI) {
+  if (msg.type === "button_reply") {
+    await bot.sendText(msg.from, TEMPLATES[user.lang].details.text);
+  } else {
+    const tempComplaint = (await client.lRange(msg.from, 0, -1))!;
+    const complaint = await createComplaint(
+      tempComplaint[2] == "0"
+        ? {
+            type: tempComplaint[1] as unknown as Complaint,
+            block: user.block,
+            house: user.house,
+            status: ComplaintStatus.Pending,
+          }
+        : {
+            type: tempComplaint[1] as unknown as Complaint,
+            block: tempComplaint[3],
+            house: tempComplaint[4],
+            status: ComplaintStatus.Pending,
+          }
+    );
+    console.log(complaint);
+
+    await client.del(msg.from);
+
+    if (user.lang == Language.English)
+      await bot.sendText(
+        msg.from,
+        TEMPLATES[Language.English].complaintThanks.text(
+          user.name,
+          complaint.type
+        )
+      );
+    else
+      await bot.sendText(
+        msg.from,
+        TEMPLATES[Language.Urdu].complaintThanks.text
+      );
+
+    await bot.sendText(msg.from, TEMPLATES[user.lang].complaintNumber.text);
+    await bot.sendText(msg.from, `${complaint._id}`);
+  }
+}
+
+async function noteBlockNumberAndAskHouseNumber(
+  msg: Message,
+  temp: string[],
+  user: UserI
+) {
   let content = "";
   let id = "";
   if (msg.type === "button_reply") {
@@ -177,51 +429,27 @@ async function noteBlockNumberAndAskHouseNumber(msg: Message, temp: string[]) {
   }
   if (temp.length > 0) {
     temp.pop();
-    await noteHouseNumberAndAskForImage(msg, temp);
+    await noteHouseNumber(msg, temp, user);
   } else if (id != "0" && id != "1" && id != "2") {
-    await bot.sendReplyButtons(msg.from, TEMPLATES.block.errorText, {
-      0: "Block 13",
-      1: "Block 17",
-      2: "Block 18",
+    await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].block.text, {
+      [Block.Block13]: await getBlockTitle(Block.Block13, user.lang),
+      [Block.Block17]: await getBlockTitle(Block.Block17, user.lang),
+      [Block.Block18]: await getBlockTitle(Block.Block18, user.lang),
     });
   } else {
     await client.rPush(msg.from, content);
-    await bot.sendText(
-      msg.from,
-      `شکایت کا پتہ کیا ہے؟\n\nWhat is the address of the complaint?`
-    );
+    await bot.sendText(msg.from, TEMPLATES[user.lang].house.text);
   }
 }
 
-async function noteHouseNumberAndAskForImage(msg: Message, temp: string[]) {
-  let content = "";
+async function noteHouseNumber(msg: Message, temp: string[], user: UserI) {
   if (msg.type === "button_reply") {
-    content = msg.data.id;
+    await bot.sendText(msg.from, TEMPLATES[user.lang].house.text);
+  } else if (temp.length > 0) {
+    await noteDetails(msg, temp, user);
   } else {
-    content = msg.data.text;
-  }
-  if (temp.length > 0) {
-  } else {
-    await client.rPush(msg.from, content);
-
-    // store record to moongoDB
-    const complaint = await createComplaint({
-      house: (await client.rPop(msg.from))!,
-      block: (await client.rPop(msg.from))!,
-      type: (await client.rPop(msg.from))! as any as Complaint,
-      status: ComplaintStatus.Pending,
-    });
-
-    await client.del(msg.from);
-
-    await bot.sendText(
-      msg.from,
-      `Thank you for registering your complaint regarding ${
-        Complaint[complaint.type]
-      }.\nPlease note your complaint number in the next message for tracking in future.\nOne of our team members will be assigned to resolve the issue as soon as possible.\nExpected complaint resolution time is 2 to 3 working days.\nWe appreciate your cooperation.\n\nTeam UC 2 Samanabad`
-    );
-    await bot.sendText(msg.from, `Your Complaint Number is:`);
-    await bot.sendText(msg.from, `${complaint._id}`);
+    await client.rPush(msg.from, msg.data.text);
+    await bot.sendText(msg.from, TEMPLATES[user.lang].details.text);
   }
 }
 
@@ -235,7 +463,8 @@ async function trackComplaint(msg: Message) {
     }
     // check if there is any complaint in the database and respond with the status
     const complaint = await getComplaintWithId(content);
-    if (complaint === null) {
+    console.log("invalid");
+    if (complaint == null) {
       return await bot.sendText(
         msg.from,
         "Invalid complaint id, re-enter the correct id"
@@ -245,11 +474,11 @@ async function trackComplaint(msg: Message) {
     await bot.sendText(
       msg.from,
       `Your complaint status is ${
-        complaint?.status === ComplaintStatus.Pending
+        complaint?.status == ComplaintStatus.Pending
           ? "pending"
-          : complaint?.status === ComplaintStatus.InProgress
+          : complaint?.status == ComplaintStatus.InProgress
           ? "in progress"
-          : complaint?.status === ComplaintStatus.Completed
+          : complaint?.status == ComplaintStatus.Completed
           ? "completed"
           : "undefined"
       }`
@@ -264,32 +493,85 @@ async function trackComplaint(msg: Message) {
   }
 }
 
-async function detectInquiry(msg: Message) {
-  let content = "";
-  if (msg.type === "button_reply") {
-    content = msg.data.id;
+// async function detectInquiry(msg: Message) {
+//   let content = "";
+//   if (msg.type === "button_reply") {
+//     content = msg.data.id;
+//   } else {
+//     content = msg.data.text;
+//   }
+//   if (content != "0" && content != "1" && content != "2" && content != "3") {
+//     await bot.sendReplyButtons(msg.from, NEW_TEMPLATES.inquiry.errorText!, {
+//       0: "Birth Certificate",
+//       1: "Death Certificate",
+//       2: "Marriage Certificate",
+//       3: "Divorce Certificate",
+//     });
+//   } else {
+//     await client.del(msg.from);
+//     await bot.sendText(
+//       msg.from,
+//       "For the issuance of birth certificate, your require theses documents:\n1: CNIC copy\n2: hospital certificate"
+//     );
+//     await bot.sendText(
+//       msg.from,
+//       "This chat has ended here, to start a new chat send any text message"
+//     );
+//   }
+// }
+
+const getBlockTitle = async (blockCode: Block, langCode: Language) => {
+  if (langCode == Language.English) {
+    return blockCode == Block.Block13
+      ? "Block 13"
+      : blockCode == Block.Block17
+      ? "Block 17"
+      : blockCode == Block.Block18
+      ? "Block 18"
+      : "undefined";
   } else {
-    content = msg.data.text;
+    return blockCode == Block.Block13
+      ? "بلاک ۱۳"
+      : blockCode == Block.Block17
+      ? "بلاک ۱۷"
+      : blockCode == Block.Block18
+      ? "بلاک ۱۸"
+      : "undefined";
   }
-  if (content != "0" && content != "1" && content != "2" && content != "3") {
-    await bot.sendReplyButtons(msg.from, TEMPLATES.inquiry.errorText, {
-      0: "Birth Certificate",
-      1: "Death Certificate",
-      2: "Marriage Certificate",
-      3: "Divorce Certificate",
-    });
+};
+
+const getComplaintTitle = async (
+  complaintCode: Complaint,
+  langCode: Language
+) => {
+  if (langCode == Language.English) {
+    return complaintCode == Complaint.Sewerage
+      ? "Sewerage"
+      : complaintCode == Complaint.StreetLight
+      ? "Street Light"
+      : complaintCode == Complaint.Sanitation
+      ? "Sanitation"
+      : "undefined";
   } else {
-    await client.del(msg.from);
-    await bot.sendText(
-      msg.from,
-      "For the issuance of birth certificate, your require theses documents:\n1: CNIC copy\n2: hospital certificate"
-    );
-    await bot.sendText(
-      msg.from,
-      "This chat has ended here, to start a new chat send any text message"
-    );
+    return complaintCode == Complaint.Sewerage
+      ? "سیوریج"
+      : complaintCode == Complaint.StreetLight
+      ? "گلی کی روشنی"
+      : complaintCode == Complaint.Sanitation
+      ? "صفائی"
+      : "undefined";
   }
-}
+};
+
+// [Complaint.GarbageCollection]: "Garbage Collection",
+// [Complaint.CleaningSweeping]: "Cleaning / Sweeping",
+// [Complaint.SewerageOverflow]: "Sewerage Overflow",
+// [Complaint.ManholeCoverMissing]: "Manhole Cover Missing",
+// [Complaint.StreetLightNotWorking]: "Street Light Not Working",
+// [Complaint.WaterLineLeakage]: "Water Line Leakage",
+// [Complaint.WaterSupplySuspended]: "Water Supply Suspended",
+// [Complaint.RoadRepair]: "Road Repair",
+// [Complaint.Other]: "Other",
 
 // 52f3d73d2308c7802bec15e6694e9076fb090a04dc6e59fbd00d5092dfadf61b
 // UvPXPSMIx4Ar7BXmaU6QdvsJCgTcbln70A1Qkt+t9hs=

@@ -37,8 +37,12 @@ bot.startExpressServer({
     // temp code for development only
     await client.del("923341850193");
     await client.del("923158508658");
+    await client.del("923362425990");
+    await client.del("923332354219");
     await client.del("923341850193/user");
     await client.del("923158508658/user");
+    await client.del("923362425990/user");
+    await client.del("923332354219/user");
 
     const [highestComplaintNumber] = await Complaint.aggregate([
       {

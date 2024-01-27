@@ -48,7 +48,7 @@ bot.startExpressServer({
         },
       },
     ]);
-    await client.set("complaintNo", highestComplaintNumber.maxId);
+    await client.set("complaintNo", +highestComplaintNumber.maxId + 1);
 
     // Send text message
     const result = await bot.sendText(

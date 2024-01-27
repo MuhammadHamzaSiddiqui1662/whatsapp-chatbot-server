@@ -657,23 +657,23 @@ const getNewComplaintTitle = async (
 ) => {
   if (langCode == Language.English) {
     return complaintCode == ComplaintType.GarbageCollection
-      ? "Sewerage"
+      ? "Garbage Collection"
       : complaintCode == ComplaintType.CleaningSweeping
-      ? "Street Light"
+      ? "Cleaning Sweeping"
       : complaintCode == ComplaintType.SewerageOverflow
-      ? "Sanitation"
+      ? "Sewerage Overflow"
       : complaintCode == ComplaintType.ManholeCoverMissing
-      ? "Sewerage"
+      ? "Manhole Cover"
       : complaintCode == ComplaintType.StreetLightNotWorking
       ? "Street Light"
       : complaintCode == ComplaintType.WaterLineLeakage
-      ? "Sanitation"
+      ? "Water Line Leakage"
       : complaintCode == ComplaintType.WaterSupplySuspended
-      ? "Sewerage"
+      ? "Water Supply Suspend"
       : complaintCode == ComplaintType.RoadRepair
-      ? "Street Light"
+      ? "Road Repair"
       : complaintCode == ComplaintType.Other
-      ? "Sanitation"
+      ? "Other"
       : "undefined";
   } else {
     return complaintCode == ComplaintType.GarbageCollection

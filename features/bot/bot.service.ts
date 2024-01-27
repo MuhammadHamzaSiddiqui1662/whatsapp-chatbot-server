@@ -6,7 +6,7 @@ import { TEMPLATES } from "../../config/templetes";
 import { app } from "../../app";
 import {
   Block,
-  Complaint,
+  ComplaintType,
   ComplaintStatus,
   Language,
   Service,
@@ -17,6 +17,7 @@ import {
 } from "../complaint/complaint.service";
 import { createUser, getUserWithMobileNumber } from "../user/user.service";
 import client from "../cache/cache.service";
+import { Complaint } from "../complaint/complaint.modal";
 
 const from = process.env.PHONE_NUMBER_ID!;
 const token = process.env.WHATSAPP_TOKEN!;
@@ -39,7 +40,15 @@ bot.startExpressServer({
     await client.del("923341850193/user");
     await client.del("923158508658/user");
 
-    await client.set("complaintNo", 1);
+    const [highestComplaintNumber] = await Complaint.aggregate([
+      {
+        $group: {
+          _id: null, // Grouping by null means grouping all documents
+          maxId: { $max: "$id" },
+        },
+      },
+    ]);
+    await client.set("complaintNo", highestComplaintNumber.maxId);
 
     // Send text message
     const result = await bot.sendText(
@@ -284,16 +293,16 @@ async function detectService(msg: Message, langCode: Language) {
     await client.rPush(msg.from, content);
     if (content == "0")
       await bot.sendReplyButtons(msg.from, TEMPLATES[langCode].complaint.text, {
-        [Complaint.Sewerage]: await getComplaintTitle(
-          Complaint.Sewerage,
+        [ComplaintType.Sewerage]: await getComplaintTitle(
+          ComplaintType.Sewerage,
           langCode
         ),
-        [Complaint.StreetLight]: await getComplaintTitle(
-          Complaint.StreetLight,
+        [ComplaintType.StreetLight]: await getComplaintTitle(
+          ComplaintType.StreetLight,
           langCode
         ),
-        [Complaint.Sanitation]: await getComplaintTitle(
-          Complaint.Sanitation,
+        [ComplaintType.Sanitation]: await getComplaintTitle(
+          ComplaintType.Sanitation,
           langCode
         ),
       });
@@ -314,16 +323,16 @@ async function detectComplaint(msg: Message, temp: string[], user: UserI) {
     await isAddressSame(msg, temp, user);
   } else if (content != "0" && content != "1" && content != "2") {
     await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].complaint.text, {
-      [Complaint.Sewerage]: await getComplaintTitle(
-        Complaint.Sewerage,
+      [ComplaintType.Sewerage]: await getComplaintTitle(
+        ComplaintType.Sewerage,
         user.lang
       ),
-      [Complaint.StreetLight]: await getComplaintTitle(
-        Complaint.StreetLight,
+      [ComplaintType.StreetLight]: await getComplaintTitle(
+        ComplaintType.StreetLight,
         user.lang
       ),
-      [Complaint.Sanitation]: await getComplaintTitle(
-        Complaint.Sanitation,
+      [ComplaintType.Sanitation]: await getComplaintTitle(
+        ComplaintType.Sanitation,
         user.lang
       ),
     });
@@ -377,14 +386,14 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
       tempComplaint[2] == "0"
         ? {
             id: complaintNo,
-            type: tempComplaint[1] as unknown as Complaint,
+            type: tempComplaint[1] as unknown as ComplaintType,
             block: user.block,
             house: user.house,
             status: ComplaintStatus.Pending,
           }
         : {
             id: complaintNo,
-            type: tempComplaint[1] as unknown as Complaint,
+            type: tempComplaint[1] as unknown as ComplaintType,
             block: tempComplaint[3],
             house: tempComplaint[4],
             status: ComplaintStatus.Pending,
@@ -546,23 +555,23 @@ const getBlockTitle = async (blockCode: Block, langCode: Language) => {
 };
 
 const getComplaintTitle = async (
-  complaintCode: Complaint,
+  complaintCode: ComplaintType,
   langCode: Language
 ) => {
   if (langCode == Language.English) {
-    return complaintCode == Complaint.Sewerage
+    return complaintCode == ComplaintType.Sewerage
       ? "Sewerage"
-      : complaintCode == Complaint.StreetLight
+      : complaintCode == ComplaintType.StreetLight
       ? "Street Light"
-      : complaintCode == Complaint.Sanitation
+      : complaintCode == ComplaintType.Sanitation
       ? "Sanitation"
       : "undefined";
   } else {
-    return complaintCode == Complaint.Sewerage
+    return complaintCode == ComplaintType.Sewerage
       ? "سیوریج"
-      : complaintCode == Complaint.StreetLight
+      : complaintCode == ComplaintType.StreetLight
       ? "گلی کی روشنی"
-      : complaintCode == Complaint.Sanitation
+      : complaintCode == ComplaintType.Sanitation
       ? "صفائی"
       : "undefined";
   }

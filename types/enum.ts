@@ -4,7 +4,7 @@ export enum Service {
   Inquiry,
 }
 
-export enum Complaint {
+export enum ComplaintType {
   Sewerage,
   StreetLight,
   Sanitation,

@@ -1,4 +1,4 @@
-import { Complaint, ComplaintStatus, Language } from "./enum";
+import { ComplaintType, ComplaintStatus, Language } from "./enum";
 
 export interface MediaResponse {
   url: string;
@@ -16,7 +16,7 @@ export type Template = {
 
 export interface ComplaintI {
   id: Number;
-  type: Complaint;
+  type: ComplaintType;
   block: string;
   house: string;
   status: ComplaintStatus;

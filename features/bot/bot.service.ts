@@ -295,21 +295,50 @@ async function detectService(msg: Message, langCode: Language) {
   } else {
     await client.rPop(msg.from);
     await client.rPush(msg.from, content);
-    if (content == "0")
+    if (content == "0") {
       await bot.sendReplyButtons(msg.from, TEMPLATES[langCode].complaint.text, {
-        [ComplaintType.Sewerage]: await getComplaintTitle(
-          ComplaintType.Sewerage,
+        [ComplaintType.GarbageCollection]: await getNewComplaintTitle(
+          ComplaintType.GarbageCollection,
           langCode
         ),
-        [ComplaintType.StreetLight]: await getComplaintTitle(
-          ComplaintType.StreetLight,
+        [ComplaintType.CleaningSweeping]: await getNewComplaintTitle(
+          ComplaintType.CleaningSweeping,
           langCode
         ),
-        [ComplaintType.Sanitation]: await getComplaintTitle(
-          ComplaintType.Sanitation,
+        [ComplaintType.SewerageOverflow]: await getNewComplaintTitle(
+          ComplaintType.SewerageOverflow,
           langCode
         ),
       });
+      await bot.sendReplyButtons(msg.from, TEMPLATES[langCode].complaint.text, {
+        [ComplaintType.ManholeCoverMissing]: await getNewComplaintTitle(
+          ComplaintType.ManholeCoverMissing,
+          langCode
+        ),
+        [ComplaintType.StreetLightNotWorking]: await getNewComplaintTitle(
+          ComplaintType.StreetLightNotWorking,
+          langCode
+        ),
+        [ComplaintType.WaterLineLeakage]: await getNewComplaintTitle(
+          ComplaintType.WaterLineLeakage,
+          langCode
+        ),
+      });
+      await bot.sendReplyButtons(msg.from, TEMPLATES[langCode].complaint.text, {
+        [ComplaintType.WaterSupplySuspended]: await getNewComplaintTitle(
+          ComplaintType.WaterSupplySuspended,
+          langCode
+        ),
+        [ComplaintType.RoadRepair]: await getNewComplaintTitle(
+          ComplaintType.RoadRepair,
+          langCode
+        ),
+        [ComplaintType.Other]: await getNewComplaintTitle(
+          ComplaintType.Other,
+          langCode
+        ),
+      });
+    }
     if (content == "1")
       await bot.sendText(msg.from, TEMPLATES[langCode].tracking.text);
   }
@@ -325,18 +354,59 @@ async function detectComplaint(msg: Message, temp: string[], user: UserI) {
   if (temp.length > 0) {
     temp.pop();
     await isAddressSame(msg, temp, user);
-  } else if (content != "0" && content != "1" && content != "2") {
+  } else if (
+    content != "0" &&
+    content != "1" &&
+    content != "2" &&
+    content != "3" &&
+    content != "4" &&
+    content != "5" &&
+    content != "6" &&
+    content != "7" &&
+    content != "8" &&
+    content != "9" &&
+    content != "10" &&
+    content != "11"
+  ) {
     await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].complaint.text, {
-      [ComplaintType.Sewerage]: await getComplaintTitle(
-        ComplaintType.Sewerage,
+      [ComplaintType.GarbageCollection]: await getNewComplaintTitle(
+        ComplaintType.GarbageCollection,
         user.lang
       ),
-      [ComplaintType.StreetLight]: await getComplaintTitle(
-        ComplaintType.StreetLight,
+      [ComplaintType.CleaningSweeping]: await getNewComplaintTitle(
+        ComplaintType.CleaningSweeping,
         user.lang
       ),
-      [ComplaintType.Sanitation]: await getComplaintTitle(
-        ComplaintType.Sanitation,
+      [ComplaintType.SewerageOverflow]: await getNewComplaintTitle(
+        ComplaintType.SewerageOverflow,
+        user.lang
+      ),
+    });
+    await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].complaint.text, {
+      [ComplaintType.ManholeCoverMissing]: await getNewComplaintTitle(
+        ComplaintType.ManholeCoverMissing,
+        user.lang
+      ),
+      [ComplaintType.StreetLightNotWorking]: await getNewComplaintTitle(
+        ComplaintType.StreetLightNotWorking,
+        user.lang
+      ),
+      [ComplaintType.WaterLineLeakage]: await getNewComplaintTitle(
+        ComplaintType.WaterLineLeakage,
+        user.lang
+      ),
+    });
+    await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].complaint.text, {
+      [ComplaintType.WaterSupplySuspended]: await getNewComplaintTitle(
+        ComplaintType.WaterSupplySuspended,
+        user.lang
+      ),
+      [ComplaintType.RoadRepair]: await getNewComplaintTitle(
+        ComplaintType.RoadRepair,
+        user.lang
+      ),
+      [ComplaintType.Other]: await getNewComplaintTitle(
+        ComplaintType.Other,
         user.lang
       ),
     });
@@ -576,6 +646,53 @@ const getComplaintTitle = async (
       : complaintCode == ComplaintType.StreetLight
       ? "گلی کی روشنی"
       : complaintCode == ComplaintType.Sanitation
+      ? "صفائی"
+      : "undefined";
+  }
+};
+
+const getNewComplaintTitle = async (
+  complaintCode: ComplaintType,
+  langCode: Language
+) => {
+  if (langCode == Language.English) {
+    return complaintCode == ComplaintType.GarbageCollection
+      ? "Sewerage"
+      : complaintCode == ComplaintType.CleaningSweeping
+      ? "Street Light"
+      : complaintCode == ComplaintType.SewerageOverflow
+      ? "Sanitation"
+      : complaintCode == ComplaintType.ManholeCoverMissing
+      ? "Sewerage"
+      : complaintCode == ComplaintType.StreetLightNotWorking
+      ? "Street Light"
+      : complaintCode == ComplaintType.WaterLineLeakage
+      ? "Sanitation"
+      : complaintCode == ComplaintType.WaterSupplySuspended
+      ? "Sewerage"
+      : complaintCode == ComplaintType.RoadRepair
+      ? "Street Light"
+      : complaintCode == ComplaintType.Other
+      ? "Sanitation"
+      : "undefined";
+  } else {
+    return complaintCode == ComplaintType.GarbageCollection
+      ? "سیوریج"
+      : complaintCode == ComplaintType.CleaningSweeping
+      ? "گلی کی روشنی"
+      : complaintCode == ComplaintType.SewerageOverflow
+      ? "صفائی"
+      : complaintCode == ComplaintType.ManholeCoverMissing
+      ? "سیوریج"
+      : complaintCode == ComplaintType.StreetLightNotWorking
+      ? "گلی کی روشنی"
+      : complaintCode == ComplaintType.WaterLineLeakage
+      ? "صفائی"
+      : complaintCode == ComplaintType.WaterSupplySuspended
+      ? "سیوریج"
+      : complaintCode == ComplaintType.RoadRepair
+      ? "گلی کی روشنی"
+      : complaintCode == ComplaintType.Other
       ? "صفائی"
       : "undefined";
   }

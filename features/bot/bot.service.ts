@@ -191,14 +191,15 @@ bot.startExpressServer({
                 break;
             }
           }
-          // } else if (msg.type === "image") {
-          //   await bot.sendText(msg.from, "Received your image!");
-          //   const imageId = msg.data.id;
-          //   console.log("image id:", imageId);
-          //   const image = await getMediaDetails(imageId);
-          //   console.log("image details", image);
-          //   const { data: imageData, headers } = await getMediaBinary(image.url);
-          //   console.log("image binary:", imageData);
+        } else if (msg.type === "image") {
+          await bot.sendText(msg.from, "Received your image!");
+          const imageId = msg.data.id;
+          console.log("image id:", imageId);
+          console.log(msg.data);
+          // const image = await getMediaDetails(imageId);
+          // console.log("image details", image);
+          // const { data: imageData, headers } = await getMediaBinary(image.url);
+          // console.log("image binary:", imageData);
         } else {
           await bot.sendText(
             msg.from,

@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import { ComplaintStatus } from "../../types/enum";
+import { ObjectId } from "mongodb";
 
 const complaintSchema = new Schema({
   id: {
@@ -24,6 +25,11 @@ const complaintSchema = new Schema({
   },
   date: {
     type: Date,
+  },
+  complainantId: {
+    type: ObjectId,
+    ref: "User",
+    required: [true, "Complainant Id is required, but recived an empty value"],
   },
 });
 

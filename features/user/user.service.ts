@@ -18,7 +18,7 @@ export const getUserWithMobileNumber = async (
   return user;
 };
 
-export const createUser = async (user: UserI) => {
+export const createUser = async (user: Omit<UserI, "_id">) => {
   const _user = new User(user);
   return await _user.save();
 };

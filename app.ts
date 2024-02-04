@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import ComplaintRouter from "./features/complaint/complaint.controller";
+import UserRouter from "./features/user/user.controller";
 
 dotenv.config();
 
@@ -27,5 +28,6 @@ app.get("/", (req, res) => {
 });
 
 app.use("/complaints", ComplaintRouter);
+app.use("/users", UserRouter);
 
 import "./features/bot/bot.service";

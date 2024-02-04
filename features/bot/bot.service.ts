@@ -390,6 +390,7 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
             block: user.block,
             house: user.house,
             status: ComplaintStatus.Pending,
+            complainantId: user._id,
           }
         : {
             id: complaintNo,
@@ -397,6 +398,7 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
             block: tempComplaint[3],
             house: tempComplaint[4],
             status: ComplaintStatus.Pending,
+            complainantId: user._id,
           }
     );
 

@@ -2,7 +2,9 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
-import ComplaintRouter from "./features/complaint/complaint.controller";
+import complaintRouter from "./features/complaint/complaint.controller";
+import authRouter from "./features/auth/auth.controller";
+import staffRouter from "./features/staff/staff.controller";
 
 dotenv.config();
 
@@ -26,6 +28,8 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-app.use("/complaints", ComplaintRouter);
+app.use("/complaints", complaintRouter);
+app.use("/auth", authRouter);
+app.use("/staff", staffRouter);
 
-import "./features/bot/bot.service";
+// import "./features/bot/bot.service";

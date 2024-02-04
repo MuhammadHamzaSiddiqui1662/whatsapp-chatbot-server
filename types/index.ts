@@ -1,4 +1,6 @@
-import { ComplaintType, ComplaintStatus, Language } from "./enum";
+import { JwtPayload } from "jsonwebtoken";
+import { ComplaintType, ComplaintStatus, Language, StaffType } from "./enum";
+import { Request as ExpressRequest } from "express";
 
 export interface MediaResponse {
   url: string;
@@ -23,9 +25,26 @@ export interface ComplaintI {
 }
 
 export interface UserI {
+  _id: string;
   name: string;
   block: string;
   house: string;
   mobile: string;
   lang: Language;
+}
+
+export interface StaffI {
+  _id: string;
+  name: string;
+  cnic: string;
+  password: string;
+  accessToken: string;
+  mobile: string;
+  email: string;
+  address: string;
+  type: StaffType;
+}
+
+export interface Request extends ExpressRequest {
+  user?: string | JwtPayload | undefined;
 }

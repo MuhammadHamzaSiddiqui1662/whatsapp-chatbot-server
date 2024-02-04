@@ -37,3 +37,9 @@ export enum Block {
   Block17,
   Block18,
 }
+
+export enum StaffType {
+  Staff,
+  Admin,
+  SuperAdmin,
+}

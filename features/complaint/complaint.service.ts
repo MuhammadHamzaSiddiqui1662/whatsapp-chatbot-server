@@ -2,8 +2,8 @@ import { ComplaintI } from "../../types";
 import { ComplaintStatus } from "../../types/enum";
 import { Complaint } from "./complaint.modal";
 
-export const getAllComplaints = async (): Promise<ComplaintI[]> => {
-  const complaints = await Complaint.find<ComplaintI>();
+export const getAllComplaints = async (query: any): Promise<ComplaintI[]> => {
+  const complaints = await Complaint.find<ComplaintI>(query);
   return complaints;
 };
 

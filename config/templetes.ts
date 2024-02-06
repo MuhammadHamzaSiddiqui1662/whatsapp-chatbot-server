@@ -38,7 +38,7 @@ export const TEMPLATES: {
       text: `Please identify your residential block:`,
     },
     residentialHouse: {
-      text: `Please share your house address in this format:`,
+      text: `Please share your house number in this format:\nA-123\LS-15`,
     },
     registrationThanks: {
       text: (name: string) =>
@@ -94,7 +94,7 @@ export const TEMPLATES: {
       text: `آپ کس بلاک میں رہتے ہیں؟`,
     },
     residentialHouse: {
-      text: `اپنا مکان نمبر اس طرح درج کریں۔`,
+      text: `اپنا مکان نمبر اس طرح درج کریں۔\nA-123\nLS-15`,
     },
     registrationThanks: {
       text: `اپنے کوائف کا اندراج کروانے کا شکریہ۔\nاب آپ اپنی شکایت درج کروا سکتے ہیں۔`,

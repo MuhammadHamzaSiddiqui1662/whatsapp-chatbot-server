@@ -20,9 +20,11 @@ export interface ComplaintI {
   block: string;
   house: string;
   status: ComplaintStatus;
+  complainantId: string;
 }
 
 export interface UserI {
+  _id: string;
   name: string;
   block: string;
   house: string;

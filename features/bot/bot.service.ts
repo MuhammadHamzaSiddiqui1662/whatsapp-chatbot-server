@@ -37,8 +37,12 @@ bot.startExpressServer({
     // temp code for development only
     await client.del("923341850193");
     await client.del("923158508658");
+    await client.del("923362425990");
+    await client.del("923332354219");
     await client.del("923341850193/user");
     await client.del("923158508658/user");
+    await client.del("923362425990/user");
+    await client.del("923332354219/user");
 
     const [highestComplaintNumber] = await Complaint.aggregate([
       {
@@ -48,7 +52,7 @@ bot.startExpressServer({
         },
       },
     ]);
-    await client.set("complaintNo", highestComplaintNumber.maxId);
+    await client.set("complaintNo", +highestComplaintNumber.maxId + 1);
 
     // Send text message
     const result = await bot.sendText(
@@ -292,21 +296,50 @@ async function detectService(msg: Message, langCode: Language) {
   } else {
     await client.rPop(msg.from);
     await client.rPush(msg.from, content);
-    if (content == "0")
+    if (content == "0") {
       await bot.sendReplyButtons(msg.from, TEMPLATES[langCode].complaint.text, {
-        [ComplaintType.Sewerage]: await getComplaintTitle(
-          ComplaintType.Sewerage,
+        [ComplaintType.GarbageCollection]: await getNewComplaintTitle(
+          ComplaintType.GarbageCollection,
           langCode
         ),
-        [ComplaintType.StreetLight]: await getComplaintTitle(
-          ComplaintType.StreetLight,
+        [ComplaintType.CleaningSweeping]: await getNewComplaintTitle(
+          ComplaintType.CleaningSweeping,
           langCode
         ),
-        [ComplaintType.Sanitation]: await getComplaintTitle(
-          ComplaintType.Sanitation,
+        [ComplaintType.SewerageOverflow]: await getNewComplaintTitle(
+          ComplaintType.SewerageOverflow,
           langCode
         ),
       });
+      await bot.sendReplyButtons(msg.from, TEMPLATES[langCode].complaint.text, {
+        [ComplaintType.ManholeCoverMissing]: await getNewComplaintTitle(
+          ComplaintType.ManholeCoverMissing,
+          langCode
+        ),
+        [ComplaintType.StreetLightNotWorking]: await getNewComplaintTitle(
+          ComplaintType.StreetLightNotWorking,
+          langCode
+        ),
+        [ComplaintType.WaterLineLeakage]: await getNewComplaintTitle(
+          ComplaintType.WaterLineLeakage,
+          langCode
+        ),
+      });
+      await bot.sendReplyButtons(msg.from, TEMPLATES[langCode].complaint.text, {
+        [ComplaintType.WaterSupplySuspended]: await getNewComplaintTitle(
+          ComplaintType.WaterSupplySuspended,
+          langCode
+        ),
+        [ComplaintType.RoadRepair]: await getNewComplaintTitle(
+          ComplaintType.RoadRepair,
+          langCode
+        ),
+        [ComplaintType.Other]: await getNewComplaintTitle(
+          ComplaintType.Other,
+          langCode
+        ),
+      });
+    }
     if (content == "1")
       await bot.sendText(msg.from, TEMPLATES[langCode].tracking.text);
   }
@@ -322,18 +355,59 @@ async function detectComplaint(msg: Message, temp: string[], user: UserI) {
   if (temp.length > 0) {
     temp.pop();
     await isAddressSame(msg, temp, user);
-  } else if (content != "0" && content != "1" && content != "2") {
+  } else if (
+    content != "0" &&
+    content != "1" &&
+    content != "2" &&
+    content != "3" &&
+    content != "4" &&
+    content != "5" &&
+    content != "6" &&
+    content != "7" &&
+    content != "8" &&
+    content != "9" &&
+    content != "10" &&
+    content != "11"
+  ) {
     await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].complaint.text, {
-      [ComplaintType.Sewerage]: await getComplaintTitle(
-        ComplaintType.Sewerage,
+      [ComplaintType.GarbageCollection]: await getNewComplaintTitle(
+        ComplaintType.GarbageCollection,
         user.lang
       ),
-      [ComplaintType.StreetLight]: await getComplaintTitle(
-        ComplaintType.StreetLight,
+      [ComplaintType.CleaningSweeping]: await getNewComplaintTitle(
+        ComplaintType.CleaningSweeping,
         user.lang
       ),
-      [ComplaintType.Sanitation]: await getComplaintTitle(
-        ComplaintType.Sanitation,
+      [ComplaintType.SewerageOverflow]: await getNewComplaintTitle(
+        ComplaintType.SewerageOverflow,
+        user.lang
+      ),
+    });
+    await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].complaint.text, {
+      [ComplaintType.ManholeCoverMissing]: await getNewComplaintTitle(
+        ComplaintType.ManholeCoverMissing,
+        user.lang
+      ),
+      [ComplaintType.StreetLightNotWorking]: await getNewComplaintTitle(
+        ComplaintType.StreetLightNotWorking,
+        user.lang
+      ),
+      [ComplaintType.WaterLineLeakage]: await getNewComplaintTitle(
+        ComplaintType.WaterLineLeakage,
+        user.lang
+      ),
+    });
+    await bot.sendReplyButtons(msg.from, TEMPLATES[user.lang].complaint.text, {
+      [ComplaintType.WaterSupplySuspended]: await getNewComplaintTitle(
+        ComplaintType.WaterSupplySuspended,
+        user.lang
+      ),
+      [ComplaintType.RoadRepair]: await getNewComplaintTitle(
+        ComplaintType.RoadRepair,
+        user.lang
+      ),
+      [ComplaintType.Other]: await getNewComplaintTitle(
+        ComplaintType.Other,
         user.lang
       ),
     });
@@ -391,6 +465,7 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
             block: user.block,
             house: user.house,
             status: ComplaintStatus.Pending,
+            complainantId: user._id,
           }
         : {
             id: complaintNo,
@@ -398,6 +473,7 @@ async function noteDetails(msg: Message, temp: string[], user: UserI) {
             block: tempComplaint[3],
             house: tempComplaint[4],
             status: ComplaintStatus.Pending,
+            complainantId: user._id,
           }
     );
 
@@ -573,6 +649,53 @@ const getComplaintTitle = async (
       : complaintCode == ComplaintType.StreetLight
       ? "گلی کی روشنی"
       : complaintCode == ComplaintType.Sanitation
+      ? "صفائی"
+      : "undefined";
+  }
+};
+
+const getNewComplaintTitle = async (
+  complaintCode: ComplaintType,
+  langCode: Language
+) => {
+  if (langCode == Language.English) {
+    return complaintCode == ComplaintType.GarbageCollection
+      ? "Garbage Collection"
+      : complaintCode == ComplaintType.CleaningSweeping
+      ? "Cleaning Sweeping"
+      : complaintCode == ComplaintType.SewerageOverflow
+      ? "Sewerage Overflow"
+      : complaintCode == ComplaintType.ManholeCoverMissing
+      ? "Manhole Cover"
+      : complaintCode == ComplaintType.StreetLightNotWorking
+      ? "Street Light"
+      : complaintCode == ComplaintType.WaterLineLeakage
+      ? "Water Line Leakage"
+      : complaintCode == ComplaintType.WaterSupplySuspended
+      ? "Water Supply Suspend"
+      : complaintCode == ComplaintType.RoadRepair
+      ? "Road Repair"
+      : complaintCode == ComplaintType.Other
+      ? "Other"
+      : "undefined";
+  } else {
+    return complaintCode == ComplaintType.GarbageCollection
+      ? "سیوریج"
+      : complaintCode == ComplaintType.CleaningSweeping
+      ? "گلی کی روشنی"
+      : complaintCode == ComplaintType.SewerageOverflow
+      ? "صفائی"
+      : complaintCode == ComplaintType.ManholeCoverMissing
+      ? "سیوریج"
+      : complaintCode == ComplaintType.StreetLightNotWorking
+      ? "گلی کی روشنی"
+      : complaintCode == ComplaintType.WaterLineLeakage
+      ? "صفائی"
+      : complaintCode == ComplaintType.WaterSupplySuspended
+      ? "سیوریج"
+      : complaintCode == ComplaintType.RoadRepair
+      ? "گلی کی روشنی"
+      : complaintCode == ComplaintType.Other
       ? "صفائی"
       : "undefined";
   }

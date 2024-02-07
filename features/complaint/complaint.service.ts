@@ -3,7 +3,7 @@ import { ComplaintStatus } from "../../types/enum";
 import { Complaint } from "./complaint.modal";
 
 export const getAllComplaints = async (query: any): Promise<ComplaintI[]> => {
-  const complaints = await Complaint.find<ComplaintI>(query);
+  const complaints = await Complaint.find<ComplaintI>(query).sort({ id: -1 });
   return complaints;
 };
 
